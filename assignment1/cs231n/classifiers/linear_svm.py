@@ -62,7 +62,7 @@ def svm_loss_naive(W, X, y, reg):
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    return loss, dW
+    return loss.item(), dW
 
 
 
@@ -133,4 +133,4 @@ def svm_loss_vectorized(W, X, y, reg):
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    return loss, dW
+    return loss.item(), dW
