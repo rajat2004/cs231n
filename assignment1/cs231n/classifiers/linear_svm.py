@@ -35,13 +35,18 @@ def svm_loss_naive(W, X, y, reg):
             margin = scores[j] - correct_class_score + 1 # note delta = 1
             if margin > 0:
                 loss += margin
+                # Calculate gradient
+                dW[:,j] += X[i,:]
+                dW[:,y[i]] -= X[i,:]
 
     # Right now the loss is a sum over all training examples, but we want it
     # to be an average instead so we divide by num_train.
     loss /= num_train
+    dW /= num_train
 
     # Add regularization to the loss.
     loss += reg * np.sum(W * W)
+    dW += reg*W
 
     #############################################################################
     # TODO:                                                                     #
@@ -56,7 +61,7 @@ def svm_loss_naive(W, X, y, reg):
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
+
     return loss, dW
 
 
@@ -77,7 +82,29 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    num_train = X.shape[0]
+
+    # Half-Vectorized, about 10 times faster
+    # num_train = X.shape[0]
+    # for i in range(num_train):
+    #     scores = X[i].dot(W)
+    #     margins = np.maximum(0, scores-scores[y[i]] + 1.0)
+    #     margins[y[i]] = 0
+    #     loss += np.sum(margins)
+
+
+    # Fully-Vectorized code, about 140x faster
+    scores = X.dot(W)
+    y_scores = scores[np.arange(num_train), y]
+    margins = np.maximum(0, scores - np.matrix(y_scores).T + 1.0)
+    margins[np.arange(num_train), y] = 0
+    loss = np.sum(np.sum(margins, axis=1), axis=0)
+
+    # Average loss
+    loss /= num_train
+
+    # Add regularization to the loss.
+    loss += reg * np.sum(W * W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -92,7 +119,17 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    margins[margins > 0] = 1
+    # Now margins is a binary matrix, consisting of 0s & 1s
+    count_row = np.sum(margins, axis=1)
+    margins[np.arange(num_train), y] = -np.matrix(count_row).T
+    dW = np.dot(X.T, margins)
+
+    # Average
+    dW /= num_train
+
+    # Regularization
+    dW += reg * W
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
