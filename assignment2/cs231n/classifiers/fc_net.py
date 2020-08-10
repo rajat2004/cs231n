@@ -240,6 +240,12 @@ class FullyConnectedNet(object):
         self.params[weight_key] = weight_init(weight_scale, input_size, num_classes)
         self.params[bias_key] = np.zeros(num_classes)
 
+        if self.normalization is not None:
+            # batch norm parameters
+            for i in range(self.num_layers-1):
+                self.params[f'gamma{i+1}'] = np.ones(hidden_dims[i])
+                self.params[f'beta{i+1}'] = np.zeros(hidden_dims[i])
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -303,12 +309,20 @@ class FullyConnectedNet(object):
         caches = []
         input = X
         output = None
+        gamma, beta, bn_params = None, None, None
 
         for layer in range(self.num_layers-1):      # Last layer is output
             weight = self.params[f'W{layer+1}']
             bias = self.params[f'b{layer+1}']
 
-            output, cache = affine_relu_forward(input, weight, bias)
+            if self.normalization is not None:
+                gamma = self.params[f'gamma{layer+1}']
+                beta = self.params[f'beta{layer+1}']
+                bn_params = self.bn_params[layer]
+
+            output, cache = affine_norm_relu_dropout_forward(input, weight, bias,
+                                gamma, beta, bn_params, self.normalization,
+                                self.use_dropout, self.dropout_param)
 
             caches.append(cache)        # Store cache for backward pass
             input = output              # This output becomes next layer's input
@@ -367,11 +381,15 @@ class FullyConnectedNet(object):
             wkey = f'W{layer+1}'
             bkey = f'b{layer+1}'
             W = self.params[wkey]
-            # b = self.params[bkey]
 
             reg_loss += 0.5 * self.reg * np.sum(W*W)
 
-            dhidden_input, dW, db = affine_relu_backward(dhidden_input, caches[layer])
+            dhidden_input, dW, db, dgamma, dbeta = affine_norm_relu_dropout_backward(dhidden_input, caches[layer],
+                                                    self.normalization, self.use_dropout)
+
+            if self.normalization is not None:
+                grads[f'gamma{layer+1}'] = dgamma
+                grads[f'beta{layer+1}'] = dbeta
 
             dW += self.reg * W
 
@@ -387,3 +405,57 @@ class FullyConnectedNet(object):
         ############################################################################
 
         return loss, grads
+
+def affine_norm_relu_dropout_forward(x, w, b, gamma, beta, bn_params, normalization, use_dropout, dropout_param):
+    """
+    Helper forward function for affine-norm-relu-dropout layers combination
+
+    Returns: out, cache (Tuple of (fc_cache, n_cache, relu_cache, dropout_cache) )
+    """
+    n_cache, dropout_cache = None, None
+
+    # Affine
+    out, fc_cache = affine_forward(x, w, b)
+
+    # Batch / Layer Normalization
+    if normalization == 'batchnorm':
+        out, n_cache = batchnorm_forward(out, gamma, beta, bn_params)
+    elif normalization == 'layernorm':
+        out, n_cache = layernorm_forward(out, gamma, beta, bn_params)
+
+    # ReLU
+    out, relu_cache = relu_forward(out)
+
+    # Dropout
+    if use_dropout:
+        out, dropout_cache = dropout_forward(out, dropout_param)
+
+    return out, (fc_cache, n_cache, relu_cache, dropout_cache)
+
+
+def affine_norm_relu_dropout_backward(dout, cache, normalization, use_dropout):
+    """
+    Helper backward function for affine-norm-relu-dropout layers
+
+    Returns: dx, dw, db, dgamma, dbeta
+    """
+    fc_cache, n_cache, relu_cache, dropout_cache = cache
+
+    # Dropout
+    if use_dropout:
+        dout = dropout_backward(dout, dropout_cache)
+
+    # ReLU
+    dout = relu_backward(dout, relu_cache)
+
+    # Normalization
+    dgamma, dbeta = None, None
+    if normalization == 'batchnorm':
+        dout, dgamma, dbeta = batchnorm_backward_alt(dout, n_cache)
+    elif normalization == 'layernorm':
+        dout, dgamma, dbeta = layernorm_backward(dout, n_cache)
+
+    # Affine
+    dx, dw, db = affine_backward(dout, fc_cache)
+
+    return dx, dw, db, dgamma, dbeta
