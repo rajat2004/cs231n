@@ -35,7 +35,17 @@ def compute_saliency_maps(X, y, model):
     ###############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = X.shape[0]
+    X = tf.convert_to_tensor(X)
+
+    with tf.GradientTape() as tape:
+        tape.watch(X)
+        scores = model.call(X)
+        correct_scores = tf.gather_nd(scores, tf.stack((tf.range(N), y), axis=1))
+        loss = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=correct_scores)
+
+    grad = tape.gradient(loss, X)
+    saliency = tf.keras.backend.max(grad, axis=3)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -84,7 +94,21 @@ def make_fooling_image(X, target_y, model):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    X_fooling = tf.convert_to_tensor(X_fooling)
+
+    for i in range(300):
+        with tf.GradientTape() as tape:
+            tape.watch(X_fooling)
+            scores = model.call(X_fooling)
+            target_score = scores[0, target_y]
+
+        if (scores.numpy()[0].argmax() == target_y):
+            print(f"Competed in {i} iterations")
+            break
+
+        grad = tape.gradient(target_score, X_fooling)
+        dX = learning_rate * tf.math.l2_normalize(grad)
+        X_fooling += dX
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -103,7 +127,17 @@ def class_visualization_update_step(X, model, target_y, l2_reg, learning_rate):
     ########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    X = tf.convert_to_tensor(X)
+
+    with tf.GradientTape() as tape:
+        tape.watch(X)
+        scores = model.call(X)
+        target_score = scores[0, target_y]
+
+    grad = tape.gradient(target_score, X)
+    dX = learning_rate * grad
+    dX -= l2_reg * ((X-tf.reduce_mean(X)) ** 2)
+    X += dX
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ############################################################################

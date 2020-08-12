@@ -5,28 +5,28 @@ NOISE_DIM = 96
 
 def leaky_relu(x, alpha=0.01):
     """Compute the leaky ReLU activation function.
-    
+
     Inputs:
     - x: TensorFlow Tensor with arbitrary shape
     - alpha: leak parameter for leaky ReLU
-    
+
     Returns:
     TensorFlow Tensor with the same shape as x
     """
     # TODO: implement leaky ReLU
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    return tf.math.maximum(alpha*x, x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
+
 def sample_noise(batch_size, dim, seed=None):
     """Generate random uniform noise from -1 to 1.
-    
+
     Inputs:
     - batch_size: integer giving the batch size of noise to generate
     - dim: integer giving the dimension of the noise to generate
-    
+
     Returns:
     TensorFlow Tensor containing uniform noise in [-1, 1] with shape [batch_size, dim]
     """
@@ -35,18 +35,18 @@ def sample_noise(batch_size, dim, seed=None):
     # TODO: sample and return noise
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    return tf.random.uniform([batch_size, dim], minval=-1, maxval=1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
+
 def discriminator(seed=None):
     """Compute discriminator score for a batch of input images.
-    
+
     Inputs:
     - x: TensorFlow Tensor of flattened input images, shape [batch_size, 784]
-    
+
     Returns:
-    TensorFlow Tensor with shape [batch_size, 1], containing the score 
+    TensorFlow Tensor with shape [batch_size, 1], containing the score
     for an image being real for each input image.
     """
     if seed is not None:
@@ -60,7 +60,14 @@ def discriminator(seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Input(784),
+        tf.keras.layers.Dense(256),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.Dense(256),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.Dense(1)
+    ])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -70,10 +77,10 @@ def discriminator(seed=None):
 
 def generator(noise_dim=NOISE_DIM, seed=None):
     """Generate images from a random noise vector.
-    
+
     Inputs:
     - z: TensorFlow Tensor of random noise with shape [batch_size, noise_dim]
-    
+
     Returns:
     TensorFlow Tensor of generated images, with shape [batch_size, 784].
     """
@@ -88,7 +95,12 @@ def generator(noise_dim=NOISE_DIM, seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Input(noise_dim),
+        tf.keras.layers.Dense(1024, activation='relu'),
+        tf.keras.layers.Dense(1024, activation='relu'),
+        tf.keras.layers.Dense(784, activation='tanh'),
+    ])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -99,18 +111,21 @@ def generator(noise_dim=NOISE_DIM, seed=None):
 def discriminator_loss(logits_real, logits_fake):
     """
     Computes the discriminator loss described above.
-    
+
     Inputs:
     - logits_real: Tensor of shape (N, 1) giving scores for the real data.
     - logits_fake: Tensor of shape (N, 1) giving scores for the fake data.
-    
+
     Returns:
     - loss: Tensor containing (scalar) the loss for the discriminator.
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    ones = tf.ones(logits_fake.shape)
+    zeros = tf.zeros(logits_real.shape)
+    loss = bce(ones, logits_real) + bce(zeros, logits_fake)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -121,14 +136,16 @@ def generator_loss(logits_fake):
 
     Inputs:
     - logits_fake: PyTorch Tensor of shape (N,) giving scores for the fake data.
-    
+
     Returns:
     - loss: PyTorch Tensor containing the (scalar) loss for the generator.
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    ones = tf.ones(logits_fake.shape)
+    loss = bce(ones, logits_fake)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -136,11 +153,11 @@ def generator_loss(logits_fake):
 
 def get_solvers(learning_rate=1e-3, beta1=0.5):
     """Create solvers for GAN training.
-    
+
     Inputs:
     - learning_rate: learning rate to use for both solvers
     - beta1: beta1 parameter for both solvers (first moment decay)
-    
+
     Returns:
     - D_solver: instance of tf.optimizers.Adam with correct learning_rate and beta1
     - G_solver: instance of tf.optimizers.Adam with correct learning_rate and beta1
@@ -150,7 +167,8 @@ def get_solvers(learning_rate=1e-3, beta1=0.5):
     G_solver = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    D_solver = tf.keras.optimizers.Adam(learning_rate, beta1)
+    G_solver = tf.keras.optimizers.Adam(learning_rate, beta1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return D_solver, G_solver
@@ -158,18 +176,18 @@ def get_solvers(learning_rate=1e-3, beta1=0.5):
 def ls_discriminator_loss(scores_real, scores_fake):
     """
     Compute the Least-Squares GAN loss for the discriminator.
-    
+
     Inputs:
     - scores_real: Tensor of shape (N, 1) giving scores for the real data.
     - scores_fake: Tensor of shape (N, 1) giving scores for the fake data.
-    
+
     Outputs:
     - loss: A Tensor containing the loss.
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = 0.5*tf.math.reduce_mean((scores_real - 1)**2) + 0.5*tf.math.reduce_mean(scores_fake**2)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -177,29 +195,29 @@ def ls_discriminator_loss(scores_real, scores_fake):
 def ls_generator_loss(scores_fake):
     """
     Computes the Least-Squares GAN loss for the generator.
-    
+
     Inputs:
     - scores_fake: Tensor of shape (N, 1) giving scores for the fake data.
-    
+
     Outputs:
     - loss: A Tensor containing the loss.
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = 0.5 * tf.math.reduce_mean((scores_fake-1)**2)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
 
 def dc_discriminator():
     """Compute discriminator score for a batch of input images.
-    
+
     Inputs:
     - x: TensorFlow Tensor of flattened input images, shape [batch_size, 784]
-    
+
     Returns:
-    TensorFlow Tensor with shape [batch_size, 1], containing the score 
+    TensorFlow Tensor with shape [batch_size, 1], containing the score
     for an image being real for each input image.
     """
     model = None
@@ -210,7 +228,20 @@ def dc_discriminator():
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Input(784),
+        tf.keras.layers.Reshape((28,28,1)),
+        tf.keras.layers.Conv2D(32, (5,5), strides=1, padding='VALID'),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.MaxPool2D((2,2), strides=2),
+        tf.keras.layers.Conv2D(64, (5,5), strides=1, padding='VALID'),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.MaxPool2D((2,2), strides=2),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(4*4*64),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.Dense(1)
+    ])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -221,10 +252,10 @@ def dc_discriminator():
 
 def dc_generator(noise_dim=NOISE_DIM):
     """Generate images from a random noise vector.
-    
+
     Inputs:
     - z: TensorFlow Tensor of random noise with shape [batch_size, noise_dim]
-    
+
     Returns:
     TensorFlow Tensor of generated images, with shape [batch_size, 784].
     """
@@ -232,7 +263,17 @@ def dc_generator(noise_dim=NOISE_DIM):
     # TODO: implement architecture
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Input(noise_dim),
+        tf.keras.layers.Dense(1024, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dense(7*7*128, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Reshape((7,7,128)),
+        tf.keras.layers.Conv2DTranspose(64, (4,4), strides=2, activation='relu', padding='SAME'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Conv2DTranspose(1, (4,4), strides=2, activation='tanh', padding='SAME')
+    ])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return model
@@ -242,7 +283,7 @@ def dc_generator(noise_dim=NOISE_DIM):
 def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss,\
               show_every=250, print_every=20, batch_size=128, num_epochs=10, noise_size=96):
     """Train a GAN for a certain number of epochs.
-    
+
     Inputs:
     - D: Discriminator model
     - G: Generator model
@@ -254,7 +295,7 @@ def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss,\
         Nothing
     """
     mnist = MNIST(batch_size=batch_size, shuffle=True)
-    
+
     iter_count = 0
     images = []
     for epoch in range(num_epochs):
@@ -268,37 +309,37 @@ def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss,\
                 logits_fake = D(tf.reshape(fake_images, [batch_size, 784]))
 
                 d_total_error = discriminator_loss(logits_real, logits_fake)
-                d_gradients = tape.gradient(d_total_error, D.trainable_variables)      
+                d_gradients = tape.gradient(d_total_error, D.trainable_variables)
                 D_solver.apply_gradients(zip(d_gradients, D.trainable_variables))
-            
+
             with tf.GradientTape() as tape:
                 g_fake_seed = sample_noise(batch_size, noise_size)
                 fake_images = G(g_fake_seed)
 
                 gen_logits_fake = D(tf.reshape(fake_images, [batch_size, 784]))
                 g_error = generator_loss(gen_logits_fake)
-                g_gradients = tape.gradient(g_error, G.trainable_variables)      
+                g_gradients = tape.gradient(g_error, G.trainable_variables)
                 G_solver.apply_gradients(zip(g_gradients, G.trainable_variables))
 
             if (iter_count % show_every == 0):
                 print('Epoch: {}, Iter: {}, D: {:.4}, G:{:.4}'.format(epoch, iter_count,d_total_error,g_error))
                 imgs_numpy = fake_images.cpu().numpy()
                 images.append(imgs_numpy[0:16])
-                
+
             iter_count += 1
-    
+
     # random noise fed into our generator
     z = sample_noise(batch_size, noise_size)
     # generated images
     G_sample = G(z)
-    
+
     return images, G_sample[:16]
 
 class MNIST(object):
     def __init__(self, batch_size, shuffle=False):
         """
         Construct an iterator object over the MNIST data
-        
+
         Inputs:
         - batch_size: Integer giving number of elements per minibatch
         - shuffle: (optional) Boolean, whether to shuffle the data on each epoch
@@ -315,7 +356,7 @@ class MNIST(object):
         idxs = np.arange(N)
         if self.shuffle:
             np.random.shuffle(idxs)
-        return iter((self.X[i:i+B], self.y[i:i+B]) for i in range(0, N, B)) 
+        return iter((self.X[i:i+B], self.y[i:i+B]) for i in range(0, N, B))
 
 def preprocess_img(x):
     return 2 * x - 1.0
